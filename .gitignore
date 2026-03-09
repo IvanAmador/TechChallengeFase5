@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Data
+complaints_143k.csv
+
+# Environment
+.env
+virtualenv/
+venv/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.Trashes
+Thumbs.db
