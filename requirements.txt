@@ -5,4 +5,7 @@ seaborn
 nltk
 wordcloud
 scikit-learn
-tensorflow
+transformers
+torch
+datasets
+accelerate
