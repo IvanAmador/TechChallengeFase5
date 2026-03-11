@@ -8,6 +8,8 @@ import torch
 from datasets import Dataset
 from transformers import (
     DistilBertForSequenceClassification,
+    DistilBertTokenizerFast,
+    DataCollatorWithPadding,
     TrainingArguments,
     Trainer,
     EarlyStoppingCallback,
@@ -17,7 +19,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from src.config import (
     MODEL_NAME, NUM_LABELS, NUM_EPOCHS, TRAIN_BATCH_SIZE, EVAL_BATCH_SIZE,
     LEARNING_RATE, WARMUP_RATIO, WEIGHT_DECAY, OUTPUT_DIR,
-    DRIVE_CHECKPOINT_DIR, LABEL2ID, ID2LABEL,
+    DRIVE_CHECKPOINT_DIR, LABEL2ID, ID2LABEL, DATALOADER_NUM_WORKERS,
 )
 
 
@@ -114,17 +116,27 @@ def train_model(
         learning_rate=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY,
         warmup_steps=warmup_steps,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="steps",
         logging_steps=100,
         load_best_model_at_end=True,
         metric_for_best_model="f1",
         greater_is_better=True,
-        fp16=torch.cuda.is_available(),  # Mixed precision apenas com GPU
+        fp16=torch.cuda.is_available(),         # Mixed precision na T4
+        optim="adamw_torch_fused",              # Otimizador fused (PyTorch ≥ 2.0): ~10% mais rápido
+        dataloader_num_workers=DATALOADER_NUM_WORKERS,  # 4 CPUs em paralelo
+        dataloader_pin_memory=torch.cuda.is_available(),  # Transferência CPU→GPU mais rápida
+        group_by_length=True,                   # Agrupa sequências de tamanho similar → menos padding
         seed=42,
-        report_to="none",               # Desativa wandb/tensorboard por padrão
+        report_to="none",                       # Desativa wandb/tensorboard por padrão
     )
+
+    # ── Data Collator — padding dinâmico por batch ─────────────────────────────
+    # Pads cada batch apenas até o comprimento máximo daquele batch (não do dataset inteiro).
+    # Com sequências curtas (~69 tokens em média), evita processar centenas de tokens [PAD].
+    tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_NAME)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt")
 
     # ── Trainer ───────────────────────────────────────────────────────────────
     trainer = WeightedTrainer(
@@ -132,6 +144,7 @@ def train_model(
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        data_collator=data_collator,
         compute_metrics=compute_metrics,
         class_weights=class_weights,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=2)],

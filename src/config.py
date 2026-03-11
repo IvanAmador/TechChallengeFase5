@@ -30,12 +30,13 @@ NUM_LABELS = 2
 
 # ── Treinamento ───────────────────────────────────────────────────────────────
 NUM_EPOCHS = 3
-TRAIN_BATCH_SIZE = 32
-EVAL_BATCH_SIZE = 64
+TRAIN_BATCH_SIZE = 64       # T4 16GB suporta batch=64 com DistilBERT fp16
+EVAL_BATCH_SIZE = 128
 LEARNING_RATE = 2e-5
-WARMUP_RATIO = 0.1     # 10% dos steps para warmup linear
+WARMUP_RATIO = 0.1          # 10% dos steps para warmup linear
 WEIGHT_DECAY = 0.01
 SEED = 42
+DATALOADER_NUM_WORKERS = 4  # Colab tem 4 CPUs; paraleliza carregamento de dados
 
 # ── Caminhos de saída ─────────────────────────────────────────────────────────
 OUTPUT_DIR = "./results"

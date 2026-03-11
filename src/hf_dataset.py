@@ -17,11 +17,13 @@ def _load_tokenizer() -> DistilBertTokenizerFast:
 
 
 def _tokenize_batch(batch: dict, tokenizer: DistilBertTokenizerFast) -> dict:
-    """Função de tokenização aplicada em batches via .map()."""
+    """Função de tokenização aplicada em batches via .map().
+    Sem padding aqui — o DataCollatorWithPadding padeia dinamicamente por batch,
+    reduzindo tokens desnecessários e acelerando o treinamento.
+    """
     return tokenizer(
         batch["text"],
         truncation=True,
-        padding="max_length",
         max_length=MAX_LENGTH,
     )
 
@@ -80,6 +82,7 @@ def prepare_hf_datasets(
         lambda batch: _tokenize_batch(batch, tokenizer),
         batched=True,
         batch_size=1000,
+        num_proc=2,
         desc="Tokenizando treino",
     )
 
@@ -88,6 +91,7 @@ def prepare_hf_datasets(
         lambda batch: _tokenize_batch(batch, tokenizer),
         batched=True,
         batch_size=1000,
+        num_proc=2,
         desc="Tokenizando teste",
     )
 
